@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Odliczanie do Kampanii</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg1:#1a0b2e; --bg2:#05010d; --gold:#f5c542; --gold2:#b8860b; --red:#c0392b; --text:#f3e9d2; --muted:#bfae8a; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html, body { height:100%; }
+  body {
+    min-height:100vh; overflow-x:hidden; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:1.4rem; padding:24px 16px; text-align:center; color:var(--text);
+    background:radial-gradient(ellipse at top, #3b1460 0%, var(--bg1) 40%, var(--bg2) 100%);
+    font-family:"Cinzel", Georgia, serif;
+  }
+  /* gwiazdy i latające symbole w tle */
+  #sky { position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
+  .star { position:absolute; width:2px; height:2px; background:#fff; border-radius:50%; animation:twinkle 3s infinite ease-in-out; }
+  @keyframes twinkle { 0%,100%{opacity:.2} 50%{opacity:1} }
+  .float { position:absolute; bottom:-60px; font-size:28px; opacity:.55; animation:rise linear forwards; }
+  @keyframes rise { to { transform:translateY(-115vh) rotate(360deg); opacity:0; } }
+  main { position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:1.4rem; }
+
+  .banner { max-width:min(560px, 92vw); border-radius:12px; box-shadow:0 0 40px rgba(245,197,66,.35); }
+
+  #d20 { width:min(190px, 45vw); cursor:pointer; filter:drop-shadow(0 0 18px rgba(245,197,66,.6));
+         animation:bob 3.5s ease-in-out infinite; transition:filter .2s; }
+  #d20:hover { filter:drop-shadow(0 0 30px rgba(245,197,66,.95)); }
+  #d20.rolling { animation:roll .8s ease-out; }
+  @keyframes bob { 0%,100%{transform:translateY(0) rotate(-4deg)} 50%{transform:translateY(-12px) rotate(4deg)} }
+  @keyframes roll { 0%{transform:rotate(0) scale(1)} 50%{transform:rotate(540deg) scale(.7)} 100%{transform:rotate(1080deg) scale(1)} }
+  .hint { font-size:.8rem; color:var(--muted); margin-top:-.8rem; min-height:1.2em; }
+
+  .pre { letter-spacing:.35em; text-transform:uppercase; color:var(--muted); font-size:.9rem; }
+  h1 { font-family:"Cinzel Decorative", serif; font-weight:900; font-size:clamp(1.8rem, 6.5vw, 3.6rem); line-height:1.15;
+       background:linear-gradient(180deg, #fff3c4, var(--gold) 45%, var(--gold2)); -webkit-background-clip:text; background-clip:text; color:transparent;
+       text-shadow:0 0 30px rgba(245,197,66,.25); }
+
+  .clock { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
+  .box { position:relative; min-width:92px; padding:16px 12px 12px; border:2px solid var(--gold2); border-radius:10px;
+         background:linear-gradient(180deg, rgba(60,20,90,.85), rgba(20,5,35,.9));
+         box-shadow:inset 0 0 18px rgba(0,0,0,.6), 0 0 14px rgba(245,197,66,.2); }
+  .box::before, .box::after { content:"✦"; position:absolute; top:3px; font-size:.7rem; color:var(--gold); }
+  .box::before { left:6px; } .box::after { right:6px; }
+  .num { font-family:"Cinzel Decorative", serif; font-weight:700; font-size:clamp(2rem, 8vw, 3.4rem); color:var(--gold); font-variant-numeric:tabular-nums; }
+  .label { font-size:.8rem; color:var(--muted); text-transform:uppercase; letter-spacing:.12em; }
+  .num.tick { animation:pulse .4s ease-out; }
+  @keyframes pulse { from{transform:scale(1.15); color:#fff} to{transform:scale(1)} }
+
+  .scroll { max-width:520px; color:var(--text); font-size:1rem; font-style:italic; opacity:.9; }
+  .target { color:var(--muted); font-size:.9rem; }
+
+  .done h1 { animation:glow 1.2s ease-in-out infinite alternate; }
+  @keyframes glow { from{filter:brightness(1)} to{filter:brightness(1.6)} }
+</style>
+</head>
+<body>
+<div id="sky"></div>
+
+<main id="app">
+  <!-- Opcjonalna grafika z GPT: zapisz jako banner.png obok tego pliku. Jeśli pliku nie ma, po prostu się nie pokaże. -->
+  <img class="banner" src="banner.png" alt="" onerror="this.remove()">
+
+  <!-- Kostka k20 – kliknij, żeby rzucić -->
+  <svg id="d20" viewBox="0 0 200 200" role="button" aria-label="Rzuć kostką k20">
+    <defs>
+      <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#e74c3c"/><stop offset="1" stop-color="#6d0f0f"/>
+      </linearGradient>
+    </defs>
+    <polygon points="100,8 180,54 180,146 100,192 20,146 20,54" fill="url(#g)" stroke="#f5c542" stroke-width="4" stroke-linejoin="round"/>
+    <polygon points="100,52 154,134 46,134" fill="#a93226" stroke="#f5c542" stroke-width="3" stroke-linejoin="round"/>
+    <g stroke="#f5c542" stroke-width="3" stroke-linecap="round" opacity=".9">
+      <line x1="100" y1="8" x2="100" y2="52"/><line x1="20" y1="54" x2="100" y2="52"/><line x1="180" y1="54" x2="100" y2="52"/>
+      <line x1="20" y1="54" x2="46" y2="134"/><line x1="180" y1="54" x2="154" y2="134"/>
+      <line x1="20" y1="146" x2="46" y2="134"/><line x1="180" y1="146" x2="154" y2="134"/>
+      <line x1="100" y1="192" x2="46" y2="134"/><line x1="100" y1="192" x2="154" y2="134"/>
+    </g>
+    <text id="roll" x="100" y="116" text-anchor="middle" font-family="Cinzel Decorative, serif" font-weight="900" font-size="34" fill="#fff3c4">20</text>
+  </svg>
+  <p class="hint" id="hint">kliknij kostkę, żeby rzucić</p>
+
+  <p class="pre">⚔ Wezwanie do przygody ⚔</p>
+  <h1 id="title">Do startu Kampanii D&amp;D zostało</h1>
+
+  <div class="clock">
+    <div class="box"><div class="num" id="d">0</div><div class="label">dni</div></div>
+    <div class="box"><div class="num" id="h">00</div><div class="label">godzin</div></div>
+    <div class="box"><div class="num" id="m">00</div><div class="label">minut</div></div>
+    <div class="box"><div class="num" id="s">00</div><div class="label">sekund</div></div>
+  </div>
+
+  <p class="scroll" id="scroll">Naostrzcie miecze, wypełnijcie karty postaci i schowajcie kostki, które zawsze wyrzucają jedynki. Mistrz Gry Pivek już czeka w karczmie i nerwowo przegląda notatki pisane wczoraj o trzeciej w nocy.</p>
+  <p class="scroll" id="quip" style="color:var(--gold); transition:opacity .5s;"></p>
+  <p class="target" id="target"></p>
+</main>
+
+<script>
+  // ====== USTAWIENIA ======
+  const TARGET = "2026-10-28T17:00:00+01:00";   // 28 października 2026, 17:00 czasu polskiego
+  const DONE_TITLE = "Rzućcie na inicjatywę! 🎲";
+  const DONE_TEXT  = "Pivek zasiada za zasłoną Mistrza Gry. Niech kostki będą dla Was łaskawe, bo on na pewno nie będzie!";
+  const QUIPS = [
+    "„To nie jest pułapka” – Pivek, chwilę przed pułapką.",
+    "Pivek zapewnia, że ten smok jest zbalansowany. Wierzymy mu. Prawie.",
+    "Pivek przygotował 40 stron lore'u. Przeczytacie z tego dwa akapity.",
+    "Za zasłoną MG Pivek ćwiczy złowieszczy śmiech. Na razie brzmi jak czajnik.",
+    "Pivek obiecał, że tym razem karczmarz nie będzie miał tajemniczej przeszłości.",
+    "Zasada domowa nr 1: Pivek ma zawsze rację. Zasada nr 2: patrz zasada nr 1.",
+    "Pivek ma już gotowy plan kampanii. Drużyna ma już gotowy plan, jak go zniszczyć.",
+    "Pivek twierdzi, że rzuca jawnie. Zasłona MG twierdzi co innego."
+  ];
+  // ========================
+
+  const $ = id => document.getElementById(id);
+  const end = new Date(TARGET).getTime();
+  const pad = n => String(n).padStart(2, "0");
+  $("target").textContent = "Start: " + new Date(end).toLocaleString("pl-PL", { dateStyle:"full", timeStyle:"short", timeZone:"Europe/Warsaw" });
+
+  // Odliczanie
+  let last = {};
+  function set(id, val) {
+    if (last[id] === val) return;
+    last[id] = val; const el = $(id); el.textContent = val;
+    el.classList.remove("tick"); void el.offsetWidth; el.classList.add("tick");
+  }
+  let finished = false;
+  function tick() {
+    const diff = Math.max(0, Math.floor((end - Date.now()) / 1000));
+    set("d", String(Math.floor(diff / 86400)));
+    set("h", pad(Math.floor(diff % 86400 / 3600)));
+    set("m", pad(Math.floor(diff % 3600 / 60)));
+    set("s", pad(diff % 60));
+    if (diff === 0 && !finished) {
+      finished = true;
+      document.body.classList.add("done");
+      $("title").textContent = DONE_TITLE;
+      $("scroll").textContent = DONE_TEXT;
+      for (let i = 0; i < 60; i++) setTimeout(() => spawn(true), i * 80);
+      setInterval(() => spawn(true), 300);
+    }
+  }
+  tick(); setInterval(tick, 1000);
+
+  // Gwiazdy
+  const sky = $("sky");
+  for (let i = 0; i < 90; i++) {
+    const s = document.createElement("div"); s.className = "star";
+    s.style.left = Math.random() * 100 + "%"; s.style.top = Math.random() * 100 + "%";
+    s.style.animationDelay = Math.random() * 3 + "s";
+    sky.appendChild(s);
+  }
+  // Latające kostki i symbole
+  const icons = ["🎲","🎲","🎲","⚔️","🐉","🧙","🛡️","📜","🏰","🧝","💰","🔮","🍺"];
+  function spawn(party) {
+    const f = document.createElement("div"); f.className = "float";
+    f.textContent = icons[Math.floor(Math.random() * icons.length)];
+    f.style.left = Math.random() * 100 + "vw";
+    f.style.fontSize = (party ? 24 + Math.random() * 30 : 18 + Math.random() * 22) + "px";
+    const dur = (party ? 4 : 9) + Math.random() * 6;
+    f.style.animationDuration = dur + "s";
+    sky.appendChild(f); setTimeout(() => f.remove(), dur * 1000);
+  }
+  setInterval(() => spawn(false), 900);
+
+  // Rotujące docinki o MG
+  let qi = Math.floor(Math.random() * QUIPS.length);
+  function nextQuip() {
+    const q = $("quip"); q.style.opacity = 0;
+    setTimeout(() => { q.textContent = QUIPS[qi++ % QUIPS.length]; q.style.opacity = 1; }, 500);
+  }
+  nextQuip(); setInterval(nextQuip, 7000);
+
+  // Rzut k20
+  const msgs = {
+    1:  "Krytyczna porażka! Pivek właśnie zapisał to w swoim złowieszczym zeszyciku.",
+    20: "NAT 20! Nawet Pivek nie przygotował się na taki wynik. Szybko improwizuje…"
+  };
+  $("d20").addEventListener("click", () => {
+    const die = $("d20"); die.classList.remove("rolling"); void die.offsetWidth; die.classList.add("rolling");
+    let n = 0; const shuffle = setInterval(() => { $("roll").textContent = 1 + Math.floor(Math.random() * 20); }, 60);
+    setTimeout(() => {
+      clearInterval(shuffle);
+      n = 1 + Math.floor(Math.random() * 20);
+      $("roll").textContent = n;
+      $("hint").textContent = msgs[n] || (n >= 15 ? `Wyrzuciłeś ${n}. Całkiem nieźle, bohaterze!` : n >= 8 ? `Wyrzuciłeś ${n}. Pivek kiwa głową z politowaniem.` : `Wyrzuciłeś ${n}. Pivek uśmiecha się złowieszczo… a przynajmniej próbuje.`);
+      if (n === 20) for (let i = 0; i < 25; i++) setTimeout(() => spawn(true), i * 60);
+    }, 800);
+  });
+</script>
+</body>
+</html>
